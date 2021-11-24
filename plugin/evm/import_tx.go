@@ -35,6 +35,16 @@ type UnsignedImportTx struct {
 	ImportedInputs []*avax.TransferableInput `serialize:"true" json:"importedInputs"`
 	// Outputs
 	Outs []EVMOutput `serialize:"true" json:"outputs"`
+
+	vm *VM
+}
+
+func (tx *UnsignedImportTx) Addresses() [][]byte {
+	addrs := make([][]byte, len(tx.Outs))
+	for i, out := range tx.Outs {
+		addrs[i] = out.Address.Bytes()
+	}
+	return addrs
 }
 
 // InputUTXOs returns the UTXOIDs of the imported funds
@@ -247,12 +257,14 @@ func (tx *UnsignedImportTx) SemanticVerify(
 // we don't want to remove an imported UTXO in semanticVerify
 // only to have the transaction not be Accepted. This would be inconsistent.
 // Recall that imported UTXOs are not kept in a versionDB.
-func (tx *UnsignedImportTx) Accept() (ids.ID, *atomic.Requests, error) {
+func (tx *UnsignedImportTx) Accept(vm *VM) (ids.ID, *atomic.Requests, error) {
 	utxoIDs := make([][]byte, len(tx.ImportedInputs))
 	for i, in := range tx.ImportedInputs {
 		inputID := in.InputID()
 		utxoIDs[i] = inputID[:]
 	}
+	vm.pubsub.Publish(NewPubSubImportFilterer(tx))
+
 	return tx.SourceChain, &atomic.Requests{RemoveRequests: utxoIDs}, nil
 }
 
