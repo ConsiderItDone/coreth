@@ -984,6 +984,7 @@ func TestExportTxAccept(t *testing.T) {
 	}
 
 	tx := &Tx{UnsignedAtomicTx: exportTx}
+	tx.SetVM(vm)
 
 	signers := [][]*crypto.PrivateKeySECP256K1R{
 		{key},
@@ -1604,6 +1605,7 @@ func TestNewExportTx(t *testing.T) {
 			}
 
 			exportTx := tx.UnsignedAtomicTx
+			exportTx.SetVM(vm)
 
 			if err := exportTx.SemanticVerify(vm, tx, parent, parent.ethBlock.BaseFee(), test.rules); err != nil {
 				t.Fatal("newExportTx created an invalid transaction", err)
@@ -1800,6 +1802,7 @@ func TestNewExportTxMulticoin(t *testing.T) {
 			}
 
 			exportTx := tx.UnsignedAtomicTx
+			exportTx.SetVM(vm)
 
 			if err := exportTx.SemanticVerify(vm, tx, parent, parent.ethBlock.BaseFee(), test.rules); err != nil {
 				t.Fatal("newExportTx created an invalid transaction", err)

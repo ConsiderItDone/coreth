@@ -141,7 +141,7 @@ func (b *Block) Accept() error {
 		return vm.db.Commit()
 	}
 
-	batchChainsAndInputs, err := mergeAtomicOps(b.atomicTxs)
+	batchChainsAndInputs, err := mergeAtomicOps(b.atomicTxs, vm)
 	if err != nil {
 		return err
 	}

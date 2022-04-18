@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ava-labs/avalanchego/pubsub"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -116,10 +117,11 @@ const (
 
 // Define the API endpoints for the VM
 const (
-	avaxEndpoint   = "/avax"
-	adminEndpoint  = "/admin"
-	ethRPCEndpoint = "/rpc"
-	ethWSEndpoint  = "/ws"
+	avaxEndpoint      = "/avax"
+	adminEndpoint     = "/admin"
+	ethRPCEndpoint    = "/rpc"
+	ethWSEndpoint     = "/ws"
+	avaxEventEndpoint = "/events"
 )
 
 var (
@@ -191,6 +193,8 @@ type VM struct {
 	*chain.State
 
 	config Config
+
+	pubsub *pubsub.Server
 
 	chainID     *big.Int
 	networkID   uint64
@@ -361,6 +365,8 @@ func (vm *VM) Initialize(
 		return err
 	}
 
+	vm.pubsub = pubsub.New(ctx.NetworkID, ctx.Log)
+
 	// Set the chain config for mainnet/fuji chain IDs
 	switch {
 	case g.Config.ChainID.Cmp(params.AvalancheMainnetChainID) == 0:
@@ -466,7 +472,7 @@ func (vm *VM) Initialize(
 	); err != nil {
 		return fmt.Errorf("failed to repair atomic repository: %w", err)
 	}
-	vm.atomicTrie, err = NewAtomicTrie(vm.db, vm.ctx.SharedMemory, bonusBlockHeights, vm.atomicTxRepository, vm.codec, lastAccepted.NumberU64())
+	vm.atomicTrie, err = NewAtomicTrie(vm, vm.db, vm.ctx.SharedMemory, bonusBlockHeights, vm.atomicTxRepository, vm.codec, lastAccepted.NumberU64())
 	if err != nil {
 		return fmt.Errorf("failed to create atomic trie: %w", err)
 	}
@@ -1024,6 +1030,7 @@ func (vm *VM) CreateHandlers() (map[string]*commonEng.HTTPHandler, error) {
 		enabledAPIs = append(enabledAPIs, "snowman")
 	}
 
+	enabledAPIs = append(enabledAPIs, "avaxEvent")
 	log.Info(fmt.Sprintf("Enabled APIs: %s", strings.Join(enabledAPIs, ", ")))
 	apis[ethRPCEndpoint] = &commonEng.HTTPHandler{
 		LockOptions: commonEng.NoLock,
@@ -1037,6 +1044,10 @@ func (vm *VM) CreateHandlers() (map[string]*commonEng.HTTPHandler, error) {
 			vm.config.WSCPURefillRate.Duration,
 			vm.config.WSCPUMaxStored.Duration,
 		),
+	}
+	apis[avaxEventEndpoint] = &commonEng.HTTPHandler{
+		LockOptions: commonEng.NoLock,
+		Handler:     vm.pubsub,
 	}
 
 	return apis, nil

@@ -23,6 +23,7 @@ func testSharedMemory() atomic.SharedMemory {
 }
 
 func TestIteratorCanIterate(t *testing.T) {
+	_, vm, _, _, _ := GenesisVM(t, true, "", "", "")
 	lastAcceptedHeight := uint64(1000)
 	db := versiondb.New(memdb.New())
 	codec := testTxCodec()
@@ -37,7 +38,7 @@ func TestIteratorCanIterate(t *testing.T) {
 
 	// create an atomic trie
 	// on create it will initialize all the transactions from the above atomic repository
-	atomicTrie1, err := newAtomicTrie(db, testSharedMemory(), nil, repo, codec, lastAcceptedHeight, 100)
+	atomicTrie1, err := newAtomicTrie(vm, db, testSharedMemory(), nil, repo, codec, lastAcceptedHeight, 100)
 	assert.NoError(t, err)
 
 	lastCommittedHash1, lastCommittedHeight1 := atomicTrie1.LastCommitted()
@@ -49,7 +50,7 @@ func TestIteratorCanIterate(t *testing.T) {
 
 	// iterate on a new atomic trie to make sure there is no resident state affecting the data and the
 	// iterator
-	atomicTrie2, err := newAtomicTrie(db, testSharedMemory(), nil, repo, codec, lastAcceptedHeight, 100)
+	atomicTrie2, err := newAtomicTrie(vm, db, testSharedMemory(), nil, repo, codec, lastAcceptedHeight, 100)
 	assert.NoError(t, err)
 	lastCommittedHash2, lastCommittedHeight2 := atomicTrie2.LastCommitted()
 	assert.NoError(t, err)
@@ -60,6 +61,7 @@ func TestIteratorCanIterate(t *testing.T) {
 }
 
 func TestIteratorHandlesInvalidData(t *testing.T) {
+	_, vm, _, _, _ := GenesisVM(t, true, "", "", "")
 	lastAcceptedHeight := uint64(1000)
 	db := versiondb.New(memdb.New())
 	codec := testTxCodec()
@@ -74,7 +76,7 @@ func TestIteratorHandlesInvalidData(t *testing.T) {
 
 	// create an atomic trie
 	// on create it will initialize all the transactions from the above atomic repository
-	atomicTrie, err := newAtomicTrie(db, testSharedMemory(), nil, repo, codec, lastAcceptedHeight, 100)
+	atomicTrie, err := newAtomicTrie(vm, db, testSharedMemory(), nil, repo, codec, lastAcceptedHeight, 100)
 	assert.NoError(t, err)
 
 	lastCommittedHash, lastCommittedHeight := atomicTrie.LastCommitted()

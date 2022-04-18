@@ -42,9 +42,13 @@ func (t *TestTx) GasUsed(fixedFee bool) (uint64, error) { return t.GasUsedV, nil
 func (t *TestTx) Verify(ctx *snow.Context, rules params.Rules) error { return t.VerifyV }
 
 // AtomicOps implements the UnsignedAtomicTx interface
-func (t *TestTx) AtomicOps() (ids.ID, *atomic.Requests, error) {
+func (t *TestTx) AtomicOps(vm *VM) (ids.ID, *atomic.Requests, error) {
 	return t.AcceptRequestsBlockchainIDV, t.AcceptRequestsV, nil
 }
+
+// SetVM implements the SetVM interface
+//func (t *TestTx) SetVM(vm *VM)  {
+//}
 
 // Initialize implements the UnsignedAtomicTx interface
 func (t *TestTx) Initialize(unsignedBytes, signedBytes []byte) {}

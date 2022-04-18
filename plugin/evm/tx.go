@@ -111,7 +111,8 @@ type UnsignedAtomicTx interface {
 	// AtomicOps returns the blockchainID and set of atomic requests that
 	// must be applied to shared memory for this transaction to be accepted.
 	// The set of atomic requests must be returned in a consistent order.
-	AtomicOps() (ids.ID, *atomic.Requests, error)
+	AtomicOps(vm *VM) (ids.ID, *atomic.Requests, error)
+	//SetVM(vm *VM)
 
 	EVMStateTransfer(ctx *snow.Context, state *state.StateDB) error
 }
@@ -282,7 +283,7 @@ func calcBytesCost(len int) uint64 {
 
 // mergeAtomicOps merges atomic requests represented by [txs]
 // to the [output] map, depending on whether [chainID] is present in the map.
-func mergeAtomicOps(txs []*Tx) (map[ids.ID]*atomic.Requests, error) {
+func mergeAtomicOps(txs []*Tx, vm *VM) (map[ids.ID]*atomic.Requests, error) {
 	if len(txs) > 1 {
 		// txs should be stored in order of txID to ensure consistency
 		// with txs initialized from the txID index.
@@ -293,7 +294,7 @@ func mergeAtomicOps(txs []*Tx) (map[ids.ID]*atomic.Requests, error) {
 	}
 	output := make(map[ids.ID]*atomic.Requests)
 	for _, tx := range txs {
-		chainID, txRequests, err := tx.UnsignedAtomicTx.AtomicOps()
+		chainID, txRequests, err := tx.UnsignedAtomicTx.AtomicOps(vm)
 		if err != nil {
 			return nil, err
 		}

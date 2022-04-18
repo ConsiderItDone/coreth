@@ -128,16 +128,16 @@ var _ AtomicTrie = &atomicTrie{}
 // If the cursor set by MarkApplyToSharedMemoryCursor exists, the atomic operations are applied synchronously
 // during initialization (blocks until ApplyToSharedMemory completes).
 func NewAtomicTrie(
-	db *versiondb.Database, sharedMemory atomic.SharedMemory,
+	vm *VM, db *versiondb.Database, sharedMemory atomic.SharedMemory,
 	bonusBlocks map[uint64]ids.ID, repo AtomicTxRepository, codec codec.Manager, lastAcceptedHeight uint64,
 ) (AtomicTrie, error) {
-	return newAtomicTrie(db, sharedMemory, bonusBlocks, repo, codec, lastAcceptedHeight, commitHeightInterval)
+	return newAtomicTrie(vm, db, sharedMemory, bonusBlocks, repo, codec, lastAcceptedHeight, commitHeightInterval)
 }
 
 // newAtomicTrie returns a new instance of a atomicTrie with a configurable commitHeightInterval, used in testing.
 // Initializes the trie before returning it.
 func newAtomicTrie(
-	db *versiondb.Database, sharedMemory atomic.SharedMemory,
+	vm *VM, db *versiondb.Database, sharedMemory atomic.SharedMemory,
 	bonusBlocks map[uint64]ids.ID, repo AtomicTxRepository, codec codec.Manager,
 	lastAcceptedHeight uint64, commitHeightInterval uint64,
 ) (*atomicTrie, error) {
@@ -183,7 +183,7 @@ func newAtomicTrie(
 	if err := atomicTrie.ApplyToSharedMemory(lastAcceptedHeight); err != nil {
 		return nil, err
 	}
-	return atomicTrie, atomicTrie.initialize(lastAcceptedHeight)
+	return atomicTrie, atomicTrie.initialize(lastAcceptedHeight, vm)
 }
 
 // lastCommittedRootIfExists returns the last committed trie root and height if it exists
@@ -219,7 +219,7 @@ func nearestCommitHeight(blockNumber uint64, commitInterval uint64) uint64 {
 // most recent height divisible by the commitInterval.
 // Subsequent updates to this trie are made using the Index call as blocks are accepted.
 // Note: this method assumes no atomic txs are applied at genesis.
-func (a *atomicTrie) initialize(lastAcceptedBlockNumber uint64) error {
+func (a *atomicTrie) initialize(lastAcceptedBlockNumber uint64, vm *VM) error {
 	start := time.Now()
 	a.log.Info("initializing atomic trie", "lastAcceptedBlockNumber", lastAcceptedBlockNumber)
 	// finalCommitHeight is the highest block that can be committed i.e. is divisible by b.commitHeightInterval
@@ -250,7 +250,7 @@ func (a *atomicTrie) initialize(lastAcceptedBlockNumber uint64) error {
 		}
 
 		// combine atomic operations from all transactions at this block height
-		combinedOps, err := mergeAtomicOps(txs)
+		combinedOps, err := mergeAtomicOps(txs, vm)
 		if err != nil {
 			return err
 		}

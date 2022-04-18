@@ -27,7 +27,7 @@ import (
 // addTxs writes [txsPerHeight] txs for heights ranging in [fromHeight, toHeight) directly to [acceptedAtomicTxDB],
 // storing the resulting transactions in [txMap] if non-nil and the resulting atomic operations in [operationsMap]
 // if non-nil.
-func addTxs(t testing.TB, codec codec.Manager, acceptedAtomicTxDB database.Database, fromHeight uint64, toHeight uint64, txsPerHeight int, txMap map[uint64][]*Tx, operationsMap map[uint64]map[ids.ID]*atomic.Requests) {
+func addTxs(t testing.TB, codec codec.Manager, acceptedAtomicTxDB database.Database, fromHeight uint64, toHeight uint64, txsPerHeight int, txMap map[uint64][]*Tx, operationsMap map[uint64]map[ids.ID]*atomic.Requests, vm *VM) {
 	for height := fromHeight; height < toHeight; height++ {
 		txs := make([]*Tx, 0, txsPerHeight)
 		for i := 0; i < txsPerHeight; i++ {
@@ -51,7 +51,7 @@ func addTxs(t testing.TB, codec codec.Manager, acceptedAtomicTxDB database.Datab
 			txMap[height] = txs
 		}
 		if operationsMap != nil {
-			atomicRequests, err := mergeAtomicOps(txs)
+			atomicRequests, err := mergeAtomicOps(txs, vm)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -72,6 +72,8 @@ func constTxsPerHeight(txCount int) func(uint64) int {
 func writeTxs(t testing.TB, repo AtomicTxRepository, fromHeight uint64, toHeight uint64,
 	txsPerHeight func(height uint64) int, txMap map[uint64][]*Tx, operationsMap map[uint64]map[ids.ID]*atomic.Requests,
 ) {
+	_, vm, _, _, _ := GenesisVM(t.(testing.T), true, "", "", "")
+
 	for height := fromHeight; height < toHeight; height++ {
 		txs := newTestTxs(txsPerHeight(height))
 		if err := repo.Write(height, txs); err != nil {
@@ -82,7 +84,7 @@ func writeTxs(t testing.TB, repo AtomicTxRepository, fromHeight uint64, toHeight
 			txMap[height] = txs
 		}
 		if operationsMap != nil {
-			atomicRequests, err := mergeAtomicOps(txs)
+			atomicRequests, err := mergeAtomicOps(txs, vm)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -210,12 +212,13 @@ func TestAtomicRepositoryReadWriteMultipleTxs(t *testing.T) {
 }
 
 func TestAtomicRepositoryPreAP5Migration(t *testing.T) {
+	_, vm, _, _, _ := GenesisVM(t, true, "", "", "")
 	db := versiondb.New(memdb.New())
 	codec := testTxCodec()
 
 	acceptedAtomicTxDB := prefixdb.New(atomicTxIDDBPrefix, db)
 	txMap := make(map[uint64][]*Tx)
-	addTxs(t, codec, acceptedAtomicTxDB, 1, 100, 1, txMap, nil)
+	addTxs(t, codec, acceptedAtomicTxDB, 1, 100, 1, txMap, nil, vm)
 	if err := db.Commit(); err != nil {
 		t.Fatal(err)
 	}

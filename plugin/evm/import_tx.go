@@ -35,6 +35,8 @@ type UnsignedImportTx struct {
 	ImportedInputs []*avax.TransferableInput `serialize:"true" json:"importedInputs"`
 	// Outputs
 	Outs []EVMOutput `serialize:"true" json:"outputs"`
+
+	//vm *VM
 }
 
 // InputUTXOs returns the UTXOIDs of the imported funds
@@ -242,12 +244,20 @@ func (tx *UnsignedImportTx) SemanticVerify(
 	return vm.conflicts(tx.InputUTXOs(), parent)
 }
 
+func (tx *UnsignedImportTx) Addresses() [][]byte {
+	addrs := make([][]byte, len(tx.Outs))
+	for i, out := range tx.Outs {
+		addrs[i] = out.Address.Bytes()
+	}
+	return addrs
+}
+
 // AtomicOps returns imported inputs spent on this transaction
 // We spend imported UTXOs here rather than in semanticVerify because
 // we don't want to remove an imported UTXO in semanticVerify
 // only to have the transaction not be Accepted. This would be inconsistent.
 // Recall that imported UTXOs are not kept in a versionDB.
-func (tx *UnsignedImportTx) AtomicOps() (ids.ID, *atomic.Requests, error) {
+func (tx *UnsignedImportTx) AtomicOps(vm *VM) (ids.ID, *atomic.Requests, error) {
 	utxoIDs := make([][]byte, len(tx.ImportedInputs))
 	for i, in := range tx.ImportedInputs {
 		inputID := in.InputID()
@@ -255,6 +265,10 @@ func (tx *UnsignedImportTx) AtomicOps() (ids.ID, *atomic.Requests, error) {
 	}
 	return tx.SourceChain, &atomic.Requests{RemoveRequests: utxoIDs}, nil
 }
+
+//func (tx * UnsignedImportTx) SetVM(vm *VM) {
+//	tx.vm = vm
+//}
 
 // newImportTx returns a new ImportTx
 func (vm *VM) newImportTx(

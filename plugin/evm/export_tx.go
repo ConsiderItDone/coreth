@@ -37,6 +37,8 @@ type UnsignedExportTx struct {
 	Ins []EVMInput `serialize:"true" json:"inputs"`
 	// Outputs that are exported to the chain
 	ExportedOutputs []*avax.TransferableOutput `serialize:"true" json:"exportedOutputs"`
+
+	//vm *VM
 }
 
 // InputUTXOs returns a set of all the hash(address:nonce) exporting funds.
@@ -231,7 +233,7 @@ func (tx *UnsignedExportTx) SemanticVerify(
 }
 
 // AtomicOps returns the atomic operations for this transaction.
-func (tx *UnsignedExportTx) AtomicOps() (ids.ID, *atomic.Requests, error) {
+func (tx *UnsignedExportTx) AtomicOps(vm *VM) (ids.ID, *atomic.Requests, error) {
 	txID := tx.ID()
 
 	elems := make([]*atomic.Element, len(tx.ExportedOutputs))
@@ -261,7 +263,28 @@ func (tx *UnsignedExportTx) AtomicOps() (ids.ID, *atomic.Requests, error) {
 		elems[i] = elem
 	}
 
+	vm.pubsub.Publish(NewPubSubFilterer(tx))
+
 	return tx.DestinationChain, &atomic.Requests{PutRequests: elems}, nil
+}
+
+//func (tx * UnsignedExportTx) SetVM(vm *VM) {
+//	tx.vm = vm
+//}
+
+func (tx *UnsignedExportTx) Addresses() [][]byte {
+	addrs := make([][]byte, 0)
+
+	for _, outputs := range tx.ExportedOutputs {
+		addressable, ok := outputs.Out.(avax.Addressable)
+		if !ok {
+			continue
+		}
+
+		addrs = append(addrs, addressable.Addresses()...)
+	}
+
+	return addrs
 }
 
 // newExportTx returns a new ExportTx
