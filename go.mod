@@ -1,6 +1,6 @@
 module github.com/ava-labs/coreth
 
-go 1.20
+go 1.21
 
 require (
 	github.com/VictoriaMetrics/fastcache v1.10.0
@@ -40,7 +40,7 @@ require (
 	go.uber.org/goleak v1.2.1
 	go.uber.org/mock v0.2.0
 	golang.org/x/crypto v0.14.0
-	golang.org/x/exp v0.0.0-20230626212559-97b1e661b5df
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 	golang.org/x/sync v0.3.0
 	golang.org/x/sys v0.13.0
 	golang.org/x/text v0.13.0
@@ -144,3 +144,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
+
+replace github.com/ava-labs/avalanchego => github.com/consideritdone/avalanchego v1.10.15-go.1.21
