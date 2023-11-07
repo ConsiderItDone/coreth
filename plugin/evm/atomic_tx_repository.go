@@ -273,8 +273,12 @@ func (a *atomicTxRepository) write(height uint64, txs []*Tx, bonus bool) error {
 		// with txs initialized from the txID index.
 		copyTxs := make([]*Tx, len(txs))
 		copy(copyTxs, txs)
-		slices.SortFunc(copyTxs, func(i, j *Tx) bool {
-			return i.Less(j)
+		slices.SortFunc(copyTxs, func(i, j *Tx) int {
+			if i.Less(j) {
+				return -1
+			}
+
+			return 1
 		})
 		txs = copyTxs
 	}
